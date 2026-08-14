@@ -1,0 +1,38 @@
+name: Generate GitHub metrics
+
+on:
+  schedule:
+    - cron: "57 18 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/metrics.yml
+
+concurrency:
+  group: profile-readme-updates
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  metrics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+
+    steps:
+      - name: Generate profile metrics
+        uses: lowlighter/metrics@65836723097537a54cd8eb90f61839426b4266b6 # v3.34
+        with:
+          user: ${{ github.repository_owner }}
+          filename: github-metrics.svg
+          token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
+          base: header, activity, community, repositories, metadata
+          config_timezone: Asia/Shanghai
+          output_action: commit
+          committer_branch: main
+          committer_message: "chore: update GitHub metrics"
