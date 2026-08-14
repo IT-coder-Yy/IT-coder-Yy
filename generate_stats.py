@@ -19,6 +19,9 @@ from zoneinfo import ZoneInfo
 START_MARKER = "<!--START_SECTION:profile-stats-->"
 END_MARKER = "<!--END_SECTION:profile-stats-->"
 DEFAULT_TIMEZONE = "Asia/Shanghai"
+TIME_BAR_WIDTH = 15
+WEEKDAY_BAR_WIDTH = 20
+LANGUAGE_BAR_WIDTH = 24
 PERIOD_ORDER = ("morning", "afternoon", "evening", "night")
 PERIOD_LABELS = {
     "morning": "🌞 Morning / 上午 (06-12)",
@@ -262,15 +265,15 @@ Based on the latest **{total_pushes}** public Push events / 基于最近 **{tota
 
 ### Time Distribution / 时段分布
 
-{text_bar(time_items, total_pushes)}
+{text_bar(time_items, total_pushes, width=TIME_BAR_WIDTH)}
 
 ### Weekday Distribution / 星期分布
 
-{text_bar(day_items, total_pushes)}
+{text_bar(day_items, total_pushes, width=WEEKDAY_BAR_WIDTH)}
 
 ### Language Distribution / 语言分布
 
-{language_bar(language_counts)}"""
+{language_bar(language_counts, width=LANGUAGE_BAR_WIDTH)}"""
 
 
 def replace_stats_section(readme: str, stats: str) -> str:
