@@ -141,7 +141,7 @@ def pad_visual(value: str, target_width: int) -> str:
     return value + " " * max(target_width - visual_width(value), 1)
 
 
-def text_bar(items: list[tuple[str, int]], total: int, width: int = 25) -> str:
+def text_bar(items: list[tuple[str, int]], total: int, width: int = 12) -> str:
     label_width = max(visual_width(label) for label, _ in items) + 2
     lines = []
 
@@ -169,7 +169,7 @@ def format_bytes(value: int) -> str:
     raise AssertionError("unreachable")
 
 
-def language_bar(language_counts: Counter[str], width: int = 25) -> str:
+def language_bar(language_counts: Counter[str], width: int = 12) -> str:
     if not language_counts:
         return "No public language data available yet. / 暂无公开语言数据。"
 
@@ -217,11 +217,19 @@ def analyze_events(
             repositories.add(repository)
 
     language_counts: Counter[str] = Counter()
+    language_errors: list[str] = []
     for repository in sorted(repositories):
         try:
             language_counts.update(fetch_repository_languages(repository, token))
         except RuntimeError as error:
             print(f"Warning: skipping language data for {repository}: {error}")
+            language_errors.append(repository)
+
+    if repositories and not language_counts and language_errors:
+        raise RuntimeError(
+            "All repository language requests failed; keeping the existing README "
+            "instead of replacing valid data with an empty result"
+        )
 
     return period_counts, day_counts, language_counts
 
