@@ -43,6 +43,8 @@ How can we make AI systems more useful, reliable, and natural to work with—not
 <tr>
 <td valign="top" width="64%">
 
+<p align="center">
+
 [![Python](https://img.shields.io/badge/Python-3776AB?style=flat-square&logo=python&logoColor=white)](https://www.python.org/)
 [![C](https://img.shields.io/badge/C-A8B9CC?style=flat-square&logo=c&logoColor=black)](https://en.cppreference.com/w/c)
 [![C++](https://img.shields.io/badge/C%2B%2B-00599C?style=flat-square&logo=cplusplus&logoColor=white)](https://isocpp.org/)
@@ -58,6 +60,8 @@ How can we make AI systems more useful, reliable, and natural to work with—not
 [![Agent](https://camo.githubusercontent.com/a3f67596ff6a12acfb2874a8a81ab1b4cc13793d537ddc7cc70fc864a1227b78/68747470733a2f2f696d672e736869656c64732e696f2f62616467652f4167656e742d3643354345373f7374796c653d666c61742d737175617265266c6f676f3d726f626f746672616d65776f726b266c6f676f436f6c6f723d7768697465)](https://github.com/IT-coder-Yy)
 [![AI](https://img.shields.io/badge/AI-111111?style=flat-square&logo=openai&logoColor=white)](https://github.com/IT-coder-Yy)
 [![GitHub](https://img.shields.io/badge/GitHub-IT--coder--Yy-181717?style=flat-square&logo=github)](https://github.com/IT-coder-Yy)
+
+</p>
 
 <!--START_SECTION:profile-stats-->
 **Coding Rhythm**
