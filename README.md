@@ -203,4 +203,4 @@ The charts use recent public GitHub Push events. Language distribution aggregate
 
 </details>
 
-<p align="right">Building with AI, one useful system at a time.</p>
+<p align="right">Building useful systems with AI, one thoughtful iteration at a time.</p>
