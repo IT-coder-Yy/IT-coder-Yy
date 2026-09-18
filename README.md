@@ -203,4 +203,12 @@ The charts use recent public GitHub Push events. Language distribution aggregate
 
 </details>
 
+<h2 align="center">Contribution Snake</h2>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="./assets/github-snake-dark.svg" />
+  <source media="(prefers-color-scheme: light)" srcset="./assets/github-snake.svg" />
+  <img width="100%" alt="Snake animation eating my GitHub contributions" src="./assets/github-snake.svg" />
+</picture>
+
 <p align="right">Building useful systems with AI, one thoughtful iteration at a time.</p>
