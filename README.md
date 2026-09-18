@@ -201,6 +201,6 @@ Build it, test it, break it, understand it, and keep shaping it until the idea b
   <img width="100%" alt="Snake animation eating my GitHub contributions" src="./assets/github-snake.svg" />
 </picture>
 
-<br><br>
+<br>
 
 <p align="right">Building useful systems with AI, one thoughtful iteration at a time.</p>
