@@ -193,16 +193,6 @@ Build it, test it, break it, understand it, and keep shaping it until the idea b
 </tr>
 </table>
 
-<details>
-<summary>About the activity stats / 关于活动统计</summary>
-<br>
-
-The charts use recent public GitHub Push events. Language distribution aggregates repository language bytes for repositories found in those events. Times are displayed in the Asia/Shanghai timezone.
-
-图表基于近期公开 Push 事件生成；语言分布汇总这些事件所涉及仓库的语言数据，时间统一按 Asia/Shanghai 时区展示。
-
-</details>
-
 <h2 align="center">Contribution Snake</h2>
 
 <picture>
@@ -210,5 +200,7 @@ The charts use recent public GitHub Push events. Language distribution aggregate
   <source media="(prefers-color-scheme: light)" srcset="./assets/github-snake.svg" />
   <img width="100%" alt="Snake animation eating my GitHub contributions" src="./assets/github-snake.svg" />
 </picture>
+
+<br><br>
 
 <p align="right">Building useful systems with AI, one thoughtful iteration at a time.</p>
