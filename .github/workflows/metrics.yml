@@ -25,6 +25,11 @@ jobs:
       contents: write
 
     steps:
+      - name: Check out the profile repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+
       - name: Generate profile metrics
         uses: lowlighter/metrics@65836723097537a54cd8eb90f61839426b4266b6 # v3.34
         with:
@@ -33,6 +38,17 @@ jobs:
           token: ${{ secrets.METRICS_TOKEN || secrets.GITHUB_TOKEN }}
           base: header, activity, community, repositories, metadata
           config_timezone: Asia/Shanghai
-          output_action: commit
-          committer_branch: main
-          committer_message: "chore: update GitHub metrics"
+          output_action: none
+
+      - name: Commit the generated metrics
+        run: |
+          sudo cp /metrics_renders/github-metrics.svg github-metrics.svg
+          git add github-metrics.svg
+          if git diff --cached --quiet; then
+            echo "No metrics changes to commit."
+            exit 0
+          fi
+          git config --local user.email "${GITHUB_REPOSITORY_OWNER_ID}+${GITHUB_REPOSITORY_OWNER}@users.noreply.github.com"
+          git config --local user.name "$GITHUB_REPOSITORY_OWNER"
+          git commit -m "chore: update GitHub metrics"
+          git push
