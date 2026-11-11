@@ -10,7 +10,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections import Counter
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -83,24 +83,54 @@ def request_json(url: str, token: str, retries: int = 3) -> Any:
     raise RuntimeError(f"GitHub API request failed for {url}: {last_error}")
 
 
-def fetch_push_events(username: str, token: str, max_pages: int = 3) -> list[dict[str, Any]]:
-    events: list[dict[str, Any]] = []
-    encoded_username = urllib.parse.quote(username, safe="")
+def fetch_commits(username: str, token: str) -> list[dict[str, Any]]:
+    base_query = f"author:{username} is:public"
+    commits: dict[str, dict[str, Any]] = {}
+    pending = [base_query]
 
-    for page in range(1, max_pages + 1):
-        url = (
-            f"https://api.github.com/users/{encoded_username}/events"
-            f"?per_page=100&page={page}"
+    def search(query: str, page: int = 1, order: str = "desc") -> dict[str, Any]:
+        params = urllib.parse.urlencode(
+            {"q": query, "sort": "author-date", "order": order, "per_page": 100, "page": page}
         )
-        payload = request_json(url, token)
-        if not isinstance(payload, list):
-            raise RuntimeError("GitHub Events API returned an unexpected response")
+        payload = request_json(f"https://api.github.com/search/commits?{params}", token)
+        if not isinstance(payload, dict) or not isinstance(payload.get("items"), list):
+            raise RuntimeError("GitHub Commit Search API returned an unexpected response")
+        if payload["incomplete_results"]:
+            raise RuntimeError("GitHub commit search was incomplete; keeping the existing README")
+        return payload
 
-        events.extend(event for event in payload if event.get("type") == "PushEvent")
-        if len(payload) < 100:
-            break
+    while pending:
+        query = pending.pop()
+        payload = search(query)
+        if payload["total_count"] > 1000:
+            # GitHub caps each search at 1,000 results, so split its date range.
+            newest = datetime.fromisoformat(
+                payload["items"][0]["commit"]["author"]["date"].replace("Z", "+00:00")
+            )
+            oldest_page = search(query, order="asc")
+            oldest = datetime.fromisoformat(
+                oldest_page["items"][0]["commit"]["author"]["date"].replace("Z", "+00:00")
+            )
+            midpoint = (oldest + (newest - oldest) / 2).replace(microsecond=0)
+            if midpoint < oldest or midpoint >= newest:
+                raise RuntimeError(
+                    "GitHub search cannot split over 1,000 commits at the same author timestamp"
+                )
+            next_second = midpoint + timedelta(seconds=1)
+            pending.extend([
+                f"{base_query} author-date:{oldest.isoformat()}..{midpoint.isoformat()}",
+                f"{base_query} author-date:{next_second.isoformat()}..{newest.isoformat()}",
+            ])
+            continue
 
-    return events
+        page_count = (payload["total_count"] + 99) // 100
+        for page in range(1, page_count + 1):
+            if page > 1:
+                payload = search(query, page)
+            for commit in payload["items"]:
+                commits.setdefault(commit["sha"], commit)
+
+    return list(commits.values())
 
 
 def fetch_repository_languages(repository: str, token: str) -> dict[str, int]:
@@ -154,10 +184,10 @@ def text_bar(items: list[tuple[str, int]], total: int, width: int = 12) -> str:
         if value and not filled:
             filled = 1
         bar = "█" * filled + "░" * (width - filled)
-        value_text = f"{value} Push" + ("es" if value != 1 else "")
+        value_text = f"{value} Commit" + ("s" if value != 1 else "")
         lines.append(
             f"{pad_visual(label, label_width)}"
-            f"{value_text:>10}  {bar}  {percentage:5.1f} %"
+            f"{value_text:>12}  {bar}  {percentage:5.1f} %"
         )
 
     return "```text\n" + "\n".join(lines) + "\n```"
@@ -199,25 +229,22 @@ def language_bar(language_counts: Counter[str], width: int = 12) -> str:
     return "```text\n" + "\n".join(lines) + "\n```"
 
 
-def analyze_events(
-    events: list[dict[str, Any]], token: str, timezone_name: str
+def analyze_commits(
+    commits: list[dict[str, Any]], token: str, timezone_name: str
 ) -> tuple[Counter[str], Counter[int], Counter[str]]:
     local_timezone = ZoneInfo(timezone_name)
     period_counts: Counter[str] = Counter({period: 0 for period in PERIOD_ORDER})
     day_counts: Counter[int] = Counter({day: 0 for day in range(7)})
     repositories: set[str] = set()
 
-    for event in events:
-        created_at = event.get("created_at")
-        if isinstance(created_at, str):
-            event_time = datetime.fromisoformat(created_at.replace("Z", "+00:00"))
-            local_time = event_time.astimezone(local_timezone)
-            period_counts[classify_period(local_time.hour)] += 1
-            day_counts[local_time.weekday()] += 1
-
-        repository = event.get("repo", {}).get("name")
-        if isinstance(repository, str) and repository:
-            repositories.add(repository)
+    for commit in commits:
+        authored_at = datetime.fromisoformat(
+            commit["commit"]["author"]["date"].replace("Z", "+00:00")
+        )
+        local_time = authored_at.astimezone(local_timezone)
+        period_counts[classify_period(local_time.hour)] += 1
+        day_counts[local_time.weekday()] += 1
+        repositories.add(commit["repository"]["full_name"])
 
     language_counts: Counter[str] = Counter()
     language_errors: list[str] = []
@@ -238,13 +265,13 @@ def analyze_events(
 
 
 def render_stats(
-    events: list[dict[str, Any]],
+    commits: list[dict[str, Any]],
     period_counts: Counter[str],
     day_counts: Counter[int],
     language_counts: Counter[str],
     timezone_name: str,
 ) -> str:
-    total_pushes = len(events)
+    total_commits = len(commits)
     most_active_period = max(PERIOD_ORDER, key=period_counts.get)
     most_active_day = max(range(7), key=day_counts.get)
     main_language = language_counts.most_common(1)[0][0] if language_counts else "N/A"
@@ -257,19 +284,21 @@ def render_stats(
 
 > Automatically updated by GitHub Actions · Last updated: {updated_at} · {timezone_name}
 
-Based on the latest **{total_pushes}** public Push events / 基于最近 **{total_pushes}** 次公开 Push 记录：
+Based on **{total_commits}** public commits by this author / 基于该作者的 **{total_commits}** 条公开 Commit：
+
+统计全部可检索的默认分支提交，按作者时间统计，同一提交只计一次；包含署名为本账号的自动提交。语言分布为相关仓库的代码体量。
 
 | Most Active Time | Most Productive Day | Main Language |
 |:---:|:---:|:---:|
-| {PERIOD_SHORT_LABELS[most_active_period]} | {DAY_SHORT_LABELS[most_active_day]} | {main_language} |
+| {PERIOD_SHORT_LABELS[most_active_period] if total_commits else "N/A"} | {DAY_SHORT_LABELS[most_active_day] if total_commits else "N/A"} | {main_language} |
 
 ### Time Distribution / 时段分布
 
-{text_bar(time_items, total_pushes, width=TIME_BAR_WIDTH)}
+{text_bar(time_items, total_commits, width=TIME_BAR_WIDTH)}
 
 ### Weekday Distribution / 星期分布
 
-{text_bar(day_items, total_pushes, width=WEEKDAY_BAR_WIDTH)}
+{text_bar(day_items, total_commits, width=WEEKDAY_BAR_WIDTH)}
 
 ### Language Distribution / 语言分布
 
@@ -297,13 +326,13 @@ def main() -> None:
     timezone_name = os.environ.get("PROFILE_TIMEZONE", DEFAULT_TIMEZONE).strip()
     readme_path = Path(os.environ.get("README_PATH", "README.md"))
 
-    print(f"Fetching recent public activity for {username}...")
-    events = fetch_push_events(username, token)
-    period_counts, day_counts, language_counts = analyze_events(
-        events, token, timezone_name
+    print(f"Fetching all searchable public commits for {username}...")
+    commits = fetch_commits(username, token)
+    period_counts, day_counts, language_counts = analyze_commits(
+        commits, token, timezone_name
     )
     stats = render_stats(
-        events,
+        commits,
         period_counts,
         day_counts,
         language_counts,
@@ -317,7 +346,7 @@ def main() -> None:
         return
 
     readme_path.write_text(updated_readme, encoding="utf-8")
-    print(f"Updated {readme_path} with {len(events)} public Push events.")
+    print(f"Updated {readme_path} with {len(commits)} public commits.")
 
 
 if __name__ == "__main__":
